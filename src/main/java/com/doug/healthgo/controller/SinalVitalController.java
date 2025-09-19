@@ -41,6 +41,7 @@ public class SinalVitalController {
         return ResponseEntity.ok(data);
     }
 
+    //Responsavel por lista dados de um paciente filtrados por intervalo de tempo.
     @GetMapping("/{pacienteId}/intervalo")
     public ResponseEntity<List<SinalVital>> getPacienteDataInterval(@PathVariable String pacienteId, @RequestParam String startTimestamp, @RequestParam String endTimestamp,
                                                                     @RequestParam(value = "dataFormat", required = false) String dateFormat){
@@ -51,6 +52,7 @@ public class SinalVitalController {
         return ResponseEntity.ok(data);
     }
 
+    // Responsavel por fazer o download dos dados completos de um paciente em CSV.
     @GetMapping("/{pacienteId}/download")
     public ResponseEntity<byte[]> downloadPacienteCsv(@PathVariable String pacienteId, @RequestParam(value = "dataFormat", required = false) String dateFormat){
         ByteArrayInputStream csvStrem = service.downloadPacienteCsv(pacienteId, dateFormat);
@@ -59,10 +61,21 @@ public class SinalVitalController {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pacienteId + "text/csv");
 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(csvBytes);
+        return ResponseEntity.ok().headers(headers).body(csvBytes);
     }
 
+    // Reponsavel por fazer o download dos dados filtrados por intervalo em CSV.
+    @GetMapping("/{pacienteId}/download-intervalo")
+    public ResponseEntity<byte[]> downloadPacienteCsvInterval(@PathVariable String pacienteId, @RequestParam String startTimestamp,
+                                                              @RequestParam String endTimestamp,
+                                                              @RequestParam(value = "dataFormat", required = false) String dateFormat){
+        ByteArrayInputStream csvStrem = service.downloadPacienteCsvInterval(pacienteId, startTimestamp, endTimestamp, dateFormat);
+        byte[] csvBytes = csvStrem.readAllBytes();
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pacienteId + "_intervalo.csv");
+        headers.add(HttpHeaders.CONTENT_TYPE, "text/csv");
+
+        return ResponseEntity.ok().headers(headers).body(csvBytes);
+    }
 }
