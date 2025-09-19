@@ -9,7 +9,12 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "sinal_vital")
+@Table(
+        name = "sinal_vital",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"paciente_id", "timestamp"})
+        }
+)
 public class SinalVital {
 
     @Id
@@ -23,7 +28,7 @@ public class SinalVital {
     @Column(name = "paciente_nome", nullable = false, length = 100)
     private String pacienteNome;
 
-    @Column(name = "paciente_cpf", nullable = false, length = 14, unique = true)
+    @Column(name = "paciente_cpf", nullable = false, length = 14)
     private String pacienteCpf;
 
     @Column(name = "timestamp", nullable = false)

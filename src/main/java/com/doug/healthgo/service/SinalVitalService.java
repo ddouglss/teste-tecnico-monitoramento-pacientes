@@ -6,7 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,14 +18,13 @@ public class SinalVitalService {
     @Autowired
     private SinalVitalRepository repository;
 
-    //formato padrão utilizado, pode ser alterado conforme origem dos dados.
-    private static final String DEFAULT_DATE_FORMAT = "dd/MM/yyyy HH:mm";
-    private static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT);
+    private static final String DEFAULT_TIME_FORMAT = "HH:mm:ss.SS";
+    private static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ofPattern(DEFAULT_TIME_FORMAT);
 
-    //Upload de arquivo CSV de sinais vitais, faz as validações dos dados...
-    public int uploadCsv(MultipartFile file, String dateFormt) throws IOException {
+    // Upload de arquivo CSV de sinais vitais, faz as validações dos dados
+    public int uploadCsv(MultipartFile file, String timeFormat) throws IOException {
         BufferedReader render = new BufferedReader(new InputStreamReader(file.getInputStream()));
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormt != null ? dateFormt : DEFAULT_DATE_FORMAT);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(timeFormat != null ? timeFormat : DEFAULT_TIME_FORMAT);
 
         String line;
         int count = 0;
@@ -31,13 +32,16 @@ public class SinalVitalService {
         List<SinalVital> batch = new ArrayList<>();
         render.readLine();
 
+        LocalDate today = LocalDate.now();
+
         while ((line = render.readLine()) != null) {
             String[] values = line.split(",");
             try{
-                //Valida quantidade de colunas
                 if(values.length < 11) throw new IllegalArgumentException("Linha incompleta");
 
-                LocalDateTime timestamp = LocalDateTime.parse(values[0], formatter);
+                LocalTime time = LocalTime.parse(values[0], formatter);
+                LocalDateTime timestamp = today.atTime(time);
+
                 Double hr = tryParseDouble(values[4]);
                 Double spo2 = tryParseDouble(values[5]);
                 Double pressaoSys = tryParseDouble(values[6]);
@@ -49,13 +53,13 @@ public class SinalVitalService {
                 SinalVital v = new SinalVital(
                         null,
                         values[1], values[2], values[3], timestamp,
-                        hr, spo2,pressaoSys, pressaoDia, temp, resFreq, status);
+                        hr, spo2, pressaoSys, pressaoDia, temp, resFreq, status);
                 batch.add(v);
                 count++;
             }
             catch(Exception e){
-               System.err.println("Erro ao processar linha " + lineNumber + ":" + line);
-               System.err.println("Detalhe:" + e.getMessage());
+                System.err.println("Erro ao processar linha " + lineNumber + ":" + line);
+                System.err.println("Detalhe:" + e.getMessage());
             }
             lineNumber++;
         }
@@ -63,7 +67,7 @@ public class SinalVitalService {
         return count;
     }
 
-    //Função auxiliar para o "parse" seguro de double
+    // Função auxiliar para o "parse" seguro de double
     private Double tryParseDouble(String value) {
         try {
             return Double.parseDouble(value);
@@ -73,28 +77,28 @@ public class SinalVitalService {
         }
     }
 
-    //Busca todos os dados ordenados de um paciente.
+    // Busca todos os dados ordenados de um paciente.
     public List<SinalVital> getPacienteData(String pacienteId) {
         return repository.findByPacienteIdOrderByTimestampAsc(pacienteId);
     }
 
-    //Busca dados de um paciente filtrados por intervalo de timestamp.
-    public List<SinalVital> getPacienteDataByInterval(String pacienteId, String startTimestamp, String endTimestamp, String dateFormat) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat != null ? dateFormat : DEFAULT_DATE_FORMAT);
-        LocalDateTime formatStart = LocalDateTime.parse(startTimestamp, formatter);
-        LocalDateTime formatEnd = LocalDateTime.parse(endTimestamp, formatter);
+    // Busca dados de um paciente filtrados por intervalo de timestamp (hora do dia)
+    public List<SinalVital> getPacienteDataByInterval(String pacienteId, String startTime, String endTime, String timeFormat) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(timeFormat != null ? timeFormat : DEFAULT_TIME_FORMAT);
+        LocalTime formatStart = LocalTime.parse(startTime, formatter);
+        LocalTime formatEnd = LocalTime.parse(endTime, formatter);
         List<SinalVital> all = getPacienteData(pacienteId);
         return all.stream()
                 .filter(v -> v.getTimestamp() != null &&
-                        !v.getTimestamp().isBefore(formatStart) &&
-                        !v.getTimestamp().isAfter(formatEnd))
+                        !v.getTimestamp().toLocalTime().isBefore(formatStart) &&
+                        !v.getTimestamp().toLocalTime().isAfter(formatEnd))
                 .collect(Collectors.toList());
     }
 
-    //Exporta lista de sinais vitais para CSV
-    public ByteArrayInputStream exportToCsv(List<SinalVital> data, String dateFormat) {
+    // Exporta lista de sinais vitais para CSV
+    public ByteArrayInputStream exportToCsv(List<SinalVital> data, String timeFormat) {
         final String HEADER = "timestamp,paciente_id,paciente_nome,paciente_cpf,hr,spo2,pressao_sys,pressao_dia,temp,resp_freq,status";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat != null ? dateFormat : DEFAULT_DATE_FORMAT);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(timeFormat != null ? timeFormat : DEFAULT_TIME_FORMAT);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PrintWriter writer = new PrintWriter(out);
@@ -102,7 +106,7 @@ public class SinalVitalService {
 
         for (SinalVital values : data) {
             writer.println(String.join(",",
-                    values.getTimestamp() != null ? values.getTimestamp().format(formatter) : "",
+                    values.getTimestamp() != null ? values.getTimestamp().toLocalTime().format(formatter) : "",
                     values.getPacienteId(),
                     values.getPacienteNome(),
                     values.getPacienteCpf(),
@@ -118,7 +122,7 @@ public class SinalVitalService {
         writer.flush();
         return new ByteArrayInputStream(out.toByteArray());
     }
-    //Função auxiliar para o "String.valueOf" seguro de double
+    // Função auxiliar para o "String.valueOf" seguro de double
     private String safeToString(Double value){
         return value != null ? String.valueOf(value) : "";
     }
@@ -128,7 +132,7 @@ public class SinalVitalService {
         for(int i = 0; i < data.size(); i++){
             SinalVital sinal = data.get(i);
             json.append("{")
-                    .append("\"timestemp\":\"").append(sinal.getTimestamp()).append("\",")
+                    .append("\"timestamp\":\"").append(sinal.getTimestamp().toLocalTime()).append("\",")
                     .append("\"pacienteId\":\"").append(sinal.getPacienteId()).append("\",")
                     .append("\"pacienteNome\":\"").append(sinal.getPacienteNome()).append("\",")
                     .append("\"pacienteCpf\":\"").append(sinal.getPacienteCpf()).append("\",")
@@ -146,15 +150,15 @@ public class SinalVitalService {
         return json.toString();
     }
 
-    //Download completo em CSV do paciente
-    public ByteArrayInputStream downloadPacienteCsv(String pacienteId, String dateFormat) {
+    // Download completo em CSV do paciente
+    public ByteArrayInputStream downloadPacienteCsv(String pacienteId, String timeFormat) {
         List<SinalVital> data = getPacienteData(pacienteId);
-        return exportToCsv(data, dateFormat);
+        return exportToCsv(data, timeFormat);
     }
 
-    //Download dos dados filtrados em CSV
-    public ByteArrayInputStream downloadPacienteCsvInterval(String pacienteId, String startTimestamp, String endTimestamp, String dateFormat) {
-        List<SinalVital> filtered = getPacienteDataByInterval(pacienteId, startTimestamp, endTimestamp, dateFormat);
-        return exportToCsv(filtered, dateFormat);
+    // Download dos dados filtrados em CSV
+    public ByteArrayInputStream downloadPacienteCsvInterval(String pacienteId, String startTime, String endTime, String timeFormat) {
+        List<SinalVital> filtered = getPacienteDataByInterval(pacienteId, startTime, endTime, timeFormat);
+        return exportToCsv(filtered, timeFormat);
     }
 }

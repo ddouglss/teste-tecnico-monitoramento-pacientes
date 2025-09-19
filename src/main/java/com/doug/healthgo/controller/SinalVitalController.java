@@ -66,11 +66,12 @@ public class SinalVitalController {
 
     // Reponsavel por fazer o download dos dados filtrados por intervalo em CSV.
     @GetMapping("/{pacienteId}/download-intervalo")
-    public ResponseEntity<byte[]> downloadPacienteCsvInterval(@PathVariable String pacienteId, @RequestParam String startTimestamp,
+    public ResponseEntity<byte[]> downloadPacienteCsvInterval(@PathVariable String pacienteId,
+                                                              @RequestParam String startTimestamp,
                                                               @RequestParam String endTimestamp,
                                                               @RequestParam(value = "dataFormat", required = false) String dateFormat){
-        ByteArrayInputStream csvStrem = service.downloadPacienteCsvInterval(pacienteId, startTimestamp, endTimestamp, dateFormat);
-        byte[] csvBytes = csvStrem.readAllBytes();
+        ByteArrayInputStream csvStream = service.downloadPacienteCsvInterval(pacienteId, startTimestamp, endTimestamp, dateFormat);
+        byte[] csvBytes = csvStream.readAllBytes();
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pacienteId + "_intervalo.csv");
