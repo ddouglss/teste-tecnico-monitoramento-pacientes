@@ -31,23 +31,23 @@
 <section>
     <h2>🚀 Como Rodar a Aplicação</h2>
 
-    <h3>1. Clonar o repositório</h3>
+<h3>1. Clonar o repositório</h3>
     <pre><code>git clone https://github.com/seu-usuario/healthgo-backend.git
 cd healthgo-backend</code></pre>
 
-    <h3>2. Rodar via Maven</h3>
+ <h3>2. Rodar via Maven</h3>
     <pre><code>./mvnw clean install
 ./mvnw spring-boot:run</code></pre>
     <p>A aplicação estará disponível em: <code>http://localhost:8080</code></p>
 
-    <h3>3. Rodar via Docker</h3>
+<h3>3. Rodar via Docker</h3>
     <h4>a) Build da imagem Docker</h4>
     <pre><code>docker build -t healthgo-backend .</code></pre>
 
-    <h4>b) Rodar container</h4>
+<h4>b) Rodar container</h4>
     <pre><code>docker run -p 8080:8080 healthgo-backend</code></pre>
 
-    <h4>c) Usando docker-compose</h4>
+<h4>c) Usando docker-compose</h4>
     <pre><code>docker-compose up --build</code></pre>
 </section>
 
