@@ -1,10 +1,10 @@
-package com.doug.teste_tecnico;
+package com.doug.healthgo;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class TesteTecnicoApplicationTests {
+class HealthGoTests {
 
 	@Test
 	void contextLoads() {

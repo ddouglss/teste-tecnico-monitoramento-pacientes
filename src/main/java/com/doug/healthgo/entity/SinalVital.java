@@ -1,4 +1,4 @@
-package com.doug.teste_tecnico.entity;
+package com.doug.healthgo.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
